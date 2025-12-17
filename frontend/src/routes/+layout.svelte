@@ -33,18 +33,22 @@
 	<link rel="icon" href="/favicon.svg" />
 </svelte:head>
 
-<nav class="navbar">
-	<span class="logo">🇯🇵 duojp</span>
-	<button class="theme-toggle" onclick={toggleDarkMode} aria-label="Toggle dark mode">
-		{#if darkMode}
-			<span class="icon">☀️</span>
-		{:else}
-			<span class="icon">🌙</span>
-		{/if}
-	</button>
-</nav>
+<div class="app-container">
+	<nav class="navbar">
+		<span class="logo">🇯🇵 duojp</span>
+		<button class="theme-toggle" onclick={toggleDarkMode} aria-label="Toggle dark mode">
+			{#if darkMode}
+				<span class="icon">☀️</span>
+			{:else}
+				<span class="icon">🌙</span>
+			{/if}
+		</button>
+	</nav>
 
-{@render children()}
+	<div class="content">
+		{@render children()}
+	</div>
+</div>
 
 <style>
 	:global(:root) {
@@ -85,12 +89,18 @@
 		--tile-shadow: #0f172a;
 	}
 
-	:global(body) {
+	:global(html, body) {
 		margin: 0;
+		padding: 0;
+		height: 100%;
+	}
+
+	:global(body) {
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		background: var(--bg-primary);
 		color: var(--text-primary);
 		transition: background-color 0.3s, color 0.3s;
+		overflow: hidden;
 	}
 
 	.navbar {
@@ -100,8 +110,7 @@
 		padding: 0.75rem 1.5rem;
 		background: var(--bg-secondary);
 		border-bottom: 1px solid var(--border-color);
-		position: sticky;
-		top: 0;
+		flex-shrink: 0;
 		z-index: 100;
 	}
 
@@ -131,5 +140,19 @@
 
 	.icon {
 		font-size: 1.2rem;
+	}
+
+	.app-container {
+		display: flex;
+		flex-direction: column;
+		height: 100vh;
+		height: 100dvh;
+	}
+
+	.content {
+		flex: 1;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
 	}
 </style>

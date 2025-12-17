@@ -186,10 +186,11 @@
 
 <style>
 	main {
+		width: 100%;
 		max-width: 600px;
 		margin: 0 auto;
 		padding: 1rem;
-		min-height: calc(100vh - 60px);
+		box-sizing: border-box;
 	}
 
 	header h1 {
