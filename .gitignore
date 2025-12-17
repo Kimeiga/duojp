@@ -1,0 +1,42 @@
+# === Heavy data files (download with ./scripts/setup.sh) ===
+data/raw/
+data/tsv/
+data/app.db
+data/static/
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.env
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# === Node.js ===
+node_modules/
+.npm
+*.log
+npm-debug.log*
+
+# === SvelteKit ===
+frontend/.svelte-kit/
+frontend/build/
+
+# === IDE ===
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# === Misc ===
+*.bak
+*.tmp
+

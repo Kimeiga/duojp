@@ -1,0 +1,6 @@
+fastapi>=0.100.0
+uvicorn>=0.22.0
+mecab-python3>=1.0.6
+unidic-lite>=1.0.8
+pydantic>=2.0.0
+
