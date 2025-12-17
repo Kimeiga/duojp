@@ -95,7 +95,7 @@
 
 <main>
 	<header>
-		<h1>🇯🇵 Japanese Sentence Builder</h1>
+		<h1>Japanese Sentence Builder</h1>
 	</header>
 
 	{#if loading}
@@ -185,50 +185,44 @@
 </main>
 
 <style>
-	:global(body) {
-		margin: 0;
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-		background: #f0f0f0;
-	}
-
 	main {
 		max-width: 600px;
 		margin: 0 auto;
 		padding: 1rem;
-		min-height: 100vh;
+		min-height: calc(100vh - 60px);
 	}
 
 	header h1 {
 		text-align: center;
-		color: #58cc02;
+		color: var(--green-primary);
 		font-size: 1.5rem;
 		margin-bottom: 2rem;
 	}
 
 	.loading {
 		text-align: center;
-		color: #777;
+		color: var(--text-secondary);
 		font-size: 1.2rem;
 		padding: 2rem;
 	}
 
 	.prompt {
-		background: white;
+		background: var(--bg-secondary);
 		padding: 1.5rem;
 		border-radius: 16px;
 		margin-bottom: 1.5rem;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+		box-shadow: 0 2px 8px var(--shadow-color);
 	}
 
 	.label {
-		color: #777;
+		color: var(--text-secondary);
 		margin: 0 0 0.5rem;
 		font-size: 0.9rem;
 	}
 
 	.english {
 		font-size: 1.4rem;
-		color: #333;
+		color: var(--text-primary);
 		margin: 0;
 		font-weight: 500;
 	}
@@ -240,8 +234,8 @@
 
 	.answer-box {
 		min-height: 70px;
-		background: white;
-		border: 2px dashed #ccc;
+		background: var(--bg-secondary);
+		border: 2px dashed var(--border-dashed);
 		border-radius: 16px;
 		padding: 0.75rem;
 		display: flex;
@@ -254,14 +248,14 @@
 
 	.answer-box:empty::before,
 	.placeholder {
-		color: #aaa;
+		color: var(--text-muted);
 		font-style: italic;
 		padding: 0.5rem;
 	}
 
 	/* Word bank - source tiles */
 	.tile-bank-container {
-		background: #e8e8e8;
+		background: var(--bg-tertiary);
 		border-radius: 16px;
 		padding: 0.75rem;
 		margin-bottom: 1rem;
@@ -279,19 +273,20 @@
 	/* Tile styling */
 	.tile {
 		padding: 0.6rem 1rem;
-		border: 2px solid #e5e5e5;
+		border: 2px solid var(--tile-border);
 		border-radius: 12px;
-		background: white;
+		background: var(--tile-bg);
+		color: var(--text-primary);
 		font-size: 1.1rem;
 		cursor: grab;
 		transition: all 0.15s ease;
-		box-shadow: 0 2px 0 #e5e5e5;
+		box-shadow: 0 2px 0 var(--tile-shadow);
 		font-family: 'Hiragino Kaku Gothic Pro', 'Yu Gothic', 'Noto Sans JP', sans-serif;
 		user-select: none;
 	}
 
 	.tile:hover {
-		background: #f7f7f7;
+		background: var(--bg-tertiary);
 		transform: translateY(-1px);
 	}
 
@@ -302,14 +297,14 @@
 	}
 
 	.tile.selected {
-		background: #1cb0f6;
+		background: var(--blue-primary);
 		color: white;
-		border-color: #1899d6;
-		box-shadow: 0 2px 0 #1899d6;
+		border-color: var(--blue-dark);
+		box-shadow: 0 2px 0 var(--blue-dark);
 	}
 
 	.tile.selected:hover {
-		background: #1ec3ff;
+		filter: brightness(1.1);
 	}
 
 	/* Actions */
@@ -336,13 +331,13 @@
 	}
 
 	.btn.primary {
-		background: #58cc02;
+		background: var(--green-primary);
 		color: white;
-		box-shadow: 0 4px 0 #46a302;
+		box-shadow: 0 4px 0 var(--green-dark);
 	}
 
 	.btn.primary:hover:not(:disabled) {
-		background: #61e002;
+		filter: brightness(1.1);
 	}
 
 	.btn.primary:active:not(:disabled) {
@@ -351,13 +346,13 @@
 	}
 
 	.btn.secondary {
-		background: white;
-		color: #777;
-		border: 2px solid #e5e5e5;
+		background: var(--bg-secondary);
+		color: var(--text-secondary);
+		border: 2px solid var(--border-color);
 	}
 
 	.btn.secondary:hover:not(:disabled) {
-		background: #f7f7f7;
+		background: var(--bg-tertiary);
 	}
 
 	/* Result panel */
@@ -370,12 +365,20 @@
 
 	.result.correct {
 		background: #d7ffb8;
-		border: 2px solid #58cc02;
+		border: 2px solid var(--green-primary);
+	}
+
+	:global(.dark) .result.correct {
+		background: rgba(74, 222, 128, 0.2);
 	}
 
 	.result.incorrect {
 		background: #ffdfe0;
 		border: 2px solid #ff4b4b;
+	}
+
+	:global(.dark) .result.incorrect {
+		background: rgba(248, 113, 113, 0.2);
 	}
 
 	.result-icon {
@@ -384,7 +387,7 @@
 	}
 
 	.result.correct .result-icon {
-		color: #58cc02;
+		color: var(--green-primary);
 	}
 
 	.result.incorrect .result-icon {
@@ -395,21 +398,22 @@
 		font-size: 1.2rem;
 		font-weight: 600;
 		margin: 0 0 0.5rem;
+		color: var(--text-primary);
 	}
 
 	.expected {
-		color: #666;
+		color: var(--text-secondary);
 		margin: 0.5rem 0 1rem;
 		font-size: 1.1rem;
 	}
 
 	.btn.next {
-		background: #1cb0f6;
+		background: var(--blue-primary);
 		color: white;
-		box-shadow: 0 4px 0 #1899d6;
+		box-shadow: 0 4px 0 var(--blue-dark);
 	}
 
 	.btn.next:hover {
-		background: #1ec3ff;
+		filter: brightness(1.1);
 	}
 </style>
