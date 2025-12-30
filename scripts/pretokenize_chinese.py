@@ -4,10 +4,13 @@ Pre-tokenize Chinese corpus sentences and output JSON chunks for serverless depl
 
 This script:
 1. Reads Chinese translations JSONL file (id, en, zh)
-2. Tokenizes each Chinese sentence with jieba
+2. Tokenizes each Chinese sentence with Stanza (Stanford NLP)
 3. Outputs JSON chunks (1000 sentences each)
 4. Creates manifest.json with metadata
 5. Creates distractors.json with common tokens for exercise generation
+
+Stanza is preferred over jieba because it properly splits 4-character idioms
+like "梦想成真" into "梦想" + "成真" which is better for language learning.
 
 Usage:
     python scripts/pretokenize_chinese.py --input data/translated_chinese/translations.jsonl --output data/static_chinese
@@ -23,9 +26,10 @@ from typing import List, Dict, Any
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
-    import jieba
+    import stanza
 except ImportError:
-    print("Please install jieba: pip install jieba")
+    print("Please install stanza: pip install stanza")
+    print("Then download the Chinese model: python -c \"import stanza; stanza.download('zh', processors='tokenize')\"")
     sys.exit(1)
 
 # Punctuation to filter out from tokens (Chinese + general)
@@ -48,10 +52,23 @@ def is_punctuation(text: str) -> bool:
     return all(c in PUNCTUATION for c in text)
 
 
+# Global Stanza pipeline (initialized lazily)
+_nlp = None
+
+def get_stanza_pipeline():
+    """Get or initialize the Stanza Chinese tokenizer."""
+    global _nlp
+    if _nlp is None:
+        _nlp = stanza.Pipeline('zh', processors='tokenize', verbose=False)
+    return _nlp
+
+
 def tokenize_sentence(zh_text: str) -> List[str]:
     """Tokenize Chinese text and return list of surface forms (no punctuation)."""
-    words = jieba.lcut(zh_text)
-    return [w for w in words if w.strip() and not is_punctuation(w)]
+    nlp = get_stanza_pipeline()
+    doc = nlp(zh_text)
+    tokens = [token.text for sent in doc.sentences for token in sent.tokens]
+    return [w for w in tokens if w.strip() and not is_punctuation(w)]
 
 
 def process_corpus(input_path: Path, output_dir: Path, verbose: bool = False):
