@@ -1,26 +1,26 @@
 """
-Jieba tokenization wrapper for Chinese text.
+LTP tokenization wrapper for Chinese text.
 Similar to the Japanese MeCab + UniDic tokenizer, but for Mandarin Chinese.
 
-Jieba is used because it:
-- Properly preserves compound words (图书馆, 洗衣机, 程序员)
-- Preserves person/place names (李明, 北京, 上海)
-- Handles idioms consistently (keeps 4-char idioms together)
-- Has highest agreement with other mainstream tokenizers (ltp, thulac, pkuseg)
+LTP (Language Technology Platform) is used because it:
+- Splits measure words properly (三 + 个, 一 + 台) - essential for learners
+- Splits verb + object (看 + 书) - learners see verbs separately
+- Splits adverb + adjective (很 + 漂亮) - learners see 很 means "very"
+- Preserves compound nouns (图书馆, 洗衣机, 热水澡)
+- Preserves names (北京, 上海, 李明)
 
-Stanza was tested but over-splits compounds and names, making it unsuitable
-for language learning where preserving meaningful units is important.
+Tested alternatives:
+- jieba: Over-groups (merges 一个舒服, 看书, 很漂亮) - bad for learning
+- stanza: Over-splits compounds (图书馆→图书+馆) - bad for learning
 """
 from dataclasses import dataclass
 from typing import List, Optional
 
 try:
-    import jieba
-    import jieba.posseg as pseg
-    jieba.setLogLevel(20)  # Suppress loading messages
-    JIEBA_AVAILABLE = True
+    from ltp import LTP
+    LTP_AVAILABLE = True
 except ImportError:
-    JIEBA_AVAILABLE = False
+    LTP_AVAILABLE = False
 
 
 @dataclass
@@ -30,8 +30,20 @@ class ChineseToken:
     pos: str  # Part of speech tag
 
 
+# Global LTP instance (lazy loaded, as it's heavy)
+_ltp_instance: Optional[LTP] = None
+
+
+def _get_ltp() -> LTP:
+    """Get or create the LTP instance."""
+    global _ltp_instance
+    if _ltp_instance is None:
+        _ltp_instance = LTP('LTP/small')
+    return _ltp_instance
+
+
 class ChineseTokenizer:
-    """Jieba tokenizer for Chinese text."""
+    """LTP tokenizer for Chinese text."""
 
     def __init__(self, use_pos: bool = False):
         """
@@ -40,10 +52,11 @@ class ChineseTokenizer:
         Args:
             use_pos: Whether to include POS tagging.
         """
-        if not JIEBA_AVAILABLE:
-            raise ImportError("jieba is not installed. Run: pip install jieba")
+        if not LTP_AVAILABLE:
+            raise ImportError("ltp is not installed. Run: pip install ltp")
 
         self.use_pos = use_pos
+        self.ltp = _get_ltp()
 
     def tokenize(self, sentence: str) -> List[ChineseToken]:
         """
@@ -55,16 +68,16 @@ class ChineseTokenizer:
         Returns:
             List of ChineseToken objects with word and POS information
         """
-        tokens = []
+        tasks = ['cws', 'pos'] if self.use_pos else ['cws']
+        output = self.ltp.pipeline([sentence], tasks=tasks)
 
-        if self.use_pos:
-            for word, pos in pseg.cut(sentence):
-                if word.strip():
-                    tokens.append(ChineseToken(surface=word, pos=pos))
-        else:
-            for word in jieba.cut(sentence):
-                if word.strip():
-                    tokens.append(ChineseToken(surface=word, pos=""))
+        tokens = []
+        words = output.cws[0]
+        pos_tags = output.pos[0] if self.use_pos else [''] * len(words)
+
+        for word, pos in zip(words, pos_tags):
+            if word.strip():
+                tokens.append(ChineseToken(surface=word, pos=pos))
 
         return tokens
 
@@ -78,7 +91,8 @@ class ChineseTokenizer:
         Returns:
             List of word strings
         """
-        return [word for word in jieba.cut(sentence) if word.strip()]
+        output = self.ltp.pipeline([sentence], tasks=['cws'])
+        return [word for word in output.cws[0] if word.strip()]
 
 
 # Module-level tokenizer instance for convenience
@@ -108,24 +122,19 @@ if __name__ == "__main__":
     test_sentences = [
         "我爱北京天安门。",
         "今天天气真好！",
-        "她正在看一本书。",
+        "她正在看一本书。",  # 看 + 书 split (verb + object)
         "你好，你叫什么名字？",
-        "梦想成真。",  # Kept as unit (idiom)
-        "我希望我的梦想成真。",
-        "我在图书馆看书。",  # 图书馆 preserved
-        "他是一个电脑程序员。",  # 程序员 preserved
+        "我希望我的梦想成真。",  # 梦想 + 成真 split
+        "我在图书馆看书。",  # 图书馆 preserved, 看 + 书 split
+        "他是一个电脑程序员。",  # 一 + 个 split (number + measure)
+        "没有什么比得上一个舒服的热水澡了。",  # Key test case
     ]
 
-    if JIEBA_AVAILABLE:
+    if LTP_AVAILABLE:
         tokenizer = ChineseTokenizer()
         for sentence in test_sentences:
             print(f"\n=== {sentence} ===")
-            tokens = tokenizer.tokenize(sentence)
-            for t in tokens:
-                print(f"  {t.surface:8}")
-
-            # Also show simple tokenization
             simple = tokenizer.tokenize_simple(sentence)
-            print(f"  Simple: {simple}")
+            print(f"  {simple}")
     else:
-        print("jieba is not installed. Run: pip install jieba")
+        print("ltp is not installed. Run: pip install ltp")

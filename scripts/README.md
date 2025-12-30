@@ -35,17 +35,20 @@ scripts/
 | Script | Purpose |
 |--------|---------|
 | `pretokenize.py` | Pre-tokenize Japanese with MeCab/UniDic |
-| `pretokenize_chinese.py` | Pre-tokenize Chinese with jieba |
+| `pretokenize_chinese.py` | Pre-tokenize Chinese with LTP |
 
 ### Chinese Tokenizer Choice
 
-After comprehensive testing (see `analysis/`), **jieba** was chosen over stanza because:
-- Preserves compound words (图书馆, 洗衣机, 程序员)
-- Preserves person/place names (李明, 北京, 上海)
-- Keeps idioms together (梦想成真)
-- 62% agreement with other mainstream tokenizers (highest)
+After comprehensive testing (see `analysis/`), **LTP** was chosen:
+- Splits measure words (三 + 个, 一 + 台) - essential for learners
+- Splits verb + object (看 + 书) - learners see verbs separately
+- Splits adverb + adjective (很 + 漂亮) - learners see 很 means "very"
+- Preserves compound nouns (图书馆, 洗衣机, 热水澡)
+- Preserves names (北京, 上海, 李明)
 
-Stanza was rejected because it over-splits compounds and names.
+Rejected alternatives:
+- **jieba**: Over-groups (merges 一个舒服, 看书, 很漂亮) - bad for learning
+- **stanza**: Over-splits compounds (图书馆→图书+馆) - bad for learning
 
 ## Analysis Scripts (`analysis/`)
 

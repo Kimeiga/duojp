@@ -4,19 +4,20 @@ Pre-tokenize Chinese corpus sentences and output JSON chunks for serverless depl
 
 This script:
 1. Reads Chinese translations JSONL file (id, en, zh)
-2. Tokenizes each Chinese sentence with jieba
+2. Tokenizes each Chinese sentence with LTP
 3. Outputs JSON chunks (1000 sentences each)
 4. Creates manifest.json with metadata
 5. Creates distractors.json with common tokens for exercise generation
 
-Jieba is used because it:
-- Properly preserves compound words (图书馆, 洗衣机, 程序员)
-- Preserves person/place names (李明, 北京, 上海)
-- Handles idioms consistently (keeps 4-char idioms together)
-- Has highest agreement with other mainstream tokenizers (ltp, thulac, pkuseg)
+LTP (Language Technology Platform) is used because it:
+- Splits measure words properly (三 + 个, 一 + 台) - essential for learners
+- Splits verb + object (看 + 书) - learners see verbs separately
+- Splits adverb + adjective (很 + 漂亮) - learners see 很 means "very"
+- Preserves compound nouns (图书馆, 洗衣机, 热水澡)
+- Preserves names (北京, 上海, 李明)
 
 Usage:
-    python scripts/pretokenize_chinese.py --input data/translated_chinese/translations.jsonl --output data/static_chinese
+    python scripts/tokenization/pretokenize_chinese.py --input data/translated_chinese/translations.jsonl --output data/static_chinese
 """
 import argparse
 import json
@@ -26,13 +27,12 @@ from collections import Counter
 from typing import List, Dict, Any
 
 # Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 try:
-    import jieba
-    jieba.setLogLevel(20)  # Suppress loading messages
+    from ltp import LTP
 except ImportError:
-    print("Please install jieba: pip install jieba")
+    print("Please install ltp: pip install ltp")
     sys.exit(1)
 
 # Punctuation to filter out from tokens (Chinese + general)
@@ -55,9 +55,22 @@ def is_punctuation(text: str) -> bool:
     return all(c in PUNCTUATION for c in text)
 
 
+# Global LTP instance (lazy loaded)
+_ltp = None
+
+def get_ltp() -> LTP:
+    """Get or initialize the LTP tokenizer."""
+    global _ltp
+    if _ltp is None:
+        _ltp = LTP('LTP/small')
+    return _ltp
+
+
 def tokenize_sentence(zh_text: str) -> List[str]:
     """Tokenize Chinese text and return list of surface forms (no punctuation)."""
-    tokens = list(jieba.cut(zh_text))
+    ltp = get_ltp()
+    output = ltp.pipeline([zh_text], tasks=['cws'])
+    tokens = output.cws[0]
     return [w for w in tokens if w.strip() and not is_punctuation(w)]
 
 
