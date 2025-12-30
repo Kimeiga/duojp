@@ -40,3 +40,10 @@ frontend/build/
 *.bak
 *.tmp
 
+# === Translation test files ===
+scripts/translation_results.json
+scripts/translation_comparison.json
+scripts/translation_batch_comparison.json
+data/translated/
+data/translated_chinese/
+

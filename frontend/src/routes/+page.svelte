@@ -4,7 +4,8 @@
 	import { flip } from 'svelte/animate';
 	import { dndzone } from 'svelte-dnd-action';
 	import { fetchExercise, gradeAnswer } from '$lib/api';
-	import type { Exercise, TileData, GradeResult, ApiTile } from '$lib/types';
+	import { languageStore } from '$lib/stores/language';
+	import { LANGUAGES, type Exercise, type TileData, type GradeResult, type ApiTile } from '$lib/types';
 
 	// Animation duration for flip transitions
 	const FLIP_DURATION_MS = 200;
@@ -15,6 +16,9 @@
 	let result: GradeResult | null = $state(null);
 	let loading = $state(true);
 	let submitting = $state(false);
+
+	// Get current language info for display
+	const currentLangInfo = $derived(LANGUAGES.find((l) => l.code === languageStore.value) || LANGUAGES[0]);
 
 	// Convert API tiles to internal TileData with stable IDs
 	function apiTilesToTileData(apiTiles: ApiTile[]): TileData[] {
@@ -30,7 +34,7 @@
 		result = null;
 		answerTiles = [];
 		try {
-			exercise = await fetchExercise();
+			exercise = await fetchExercise(languageStore.value);
 			bankTiles = apiTilesToTileData(exercise.tiles);
 		} catch (e) {
 			console.error('Failed to load exercise:', e);
@@ -82,7 +86,7 @@
 		submitting = true;
 		const answer = answerTiles.map((t) => t.text).join('');
 		try {
-			result = await gradeAnswer(exercise.exercise_id, answer);
+			result = await gradeAnswer(exercise.exercise_id, answer, languageStore.value);
 		} catch (e) {
 			console.error('Failed to grade:', e);
 		} finally {
@@ -95,7 +99,7 @@
 
 <main>
 	<header>
-		<h1>Japanese Sentence Builder</h1>
+		<h1>{currentLangInfo.nativeName} Sentence Builder</h1>
 	</header>
 
 	{#if loading}

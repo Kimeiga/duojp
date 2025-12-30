@@ -1,32 +1,45 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-// Configuration - can switch to jsDelivr for production
-const DATA_BASE_URL = '/data'; // Local static files
-// const DATA_BASE_URL = 'https://cdn.jsdelivr.net/gh/username/duojp-data@main';
+// Supported languages and their data paths
+type Language = 'ja' | 'zh';
+const LANGUAGE_DATA_PATHS: Record<Language, string> = {
+	ja: '/data',      // Japanese - default
+	zh: '/data-zh'    // Chinese (Mandarin)
+};
 
 interface Manifest {
 	total: number;
 	chunks: number;
 	chunk_size: number;
 	source: string;
+	language?: string;
 }
 
-interface Sentence {
+interface SentenceJa {
 	id: number;
 	en: string;
 	ja: string;
 	tokens: string[];
 }
 
+interface SentenceZh {
+	id: number;
+	en: string;
+	zh: string;
+	tokens: string[];
+}
+
+type Sentence = SentenceJa | SentenceZh;
+
 interface TileData {
 	id: number;
 	text: string;
 }
 
-// Cache manifest and distractors in memory
-let cachedManifest: Manifest | null = null;
-let cachedDistractors: string[] | null = null;
+// Cache manifest and distractors per language
+const cachedManifests: Partial<Record<Language, Manifest>> = {};
+const cachedDistractors: Partial<Record<Language, string[]>> = {};
 
 async function fetchJSON<T>(fetch: typeof globalThis.fetch, url: string): Promise<T> {
 	const response = await fetch(url);
@@ -36,18 +49,24 @@ async function fetchJSON<T>(fetch: typeof globalThis.fetch, url: string): Promis
 	return response.json();
 }
 
-async function getManifest(fetch: typeof globalThis.fetch): Promise<Manifest> {
-	if (!cachedManifest) {
-		cachedManifest = await fetchJSON<Manifest>(fetch, `${DATA_BASE_URL}/manifest.json`);
-	}
-	return cachedManifest;
+function getDataPath(lang: Language): string {
+	return LANGUAGE_DATA_PATHS[lang] || LANGUAGE_DATA_PATHS.ja;
 }
 
-async function getDistractors(fetch: typeof globalThis.fetch): Promise<string[]> {
-	if (!cachedDistractors) {
-		cachedDistractors = await fetchJSON<string[]>(fetch, `${DATA_BASE_URL}/distractors.json`);
+async function getManifest(fetch: typeof globalThis.fetch, lang: Language): Promise<Manifest> {
+	if (!cachedManifests[lang]) {
+		const dataPath = getDataPath(lang);
+		cachedManifests[lang] = await fetchJSON<Manifest>(fetch, `${dataPath}/manifest.json`);
 	}
-	return cachedDistractors;
+	return cachedManifests[lang]!;
+}
+
+async function getDistractors(fetch: typeof globalThis.fetch, lang: Language): Promise<string[]> {
+	if (!cachedDistractors[lang]) {
+		const dataPath = getDataPath(lang);
+		cachedDistractors[lang] = await fetchJSON<string[]>(fetch, `${dataPath}/distractors.json`);
+	}
+	return cachedDistractors[lang]!;
 }
 
 function shuffle<T>(array: T[]): T[] {
@@ -59,11 +78,23 @@ function shuffle<T>(array: T[]): T[] {
 	return result;
 }
 
-export const GET: RequestHandler = async ({ fetch }) => {
+function getTargetText(sentence: Sentence, lang: Language): string {
+	if (lang === 'zh') {
+		return (sentence as SentenceZh).zh;
+	}
+	return (sentence as SentenceJa).ja;
+}
+
+export const GET: RequestHandler = async ({ fetch, url }) => {
 	try {
+		// Get language from query param (default: Japanese)
+		const langParam = url.searchParams.get('lang');
+		const lang: Language = (langParam === 'zh') ? 'zh' : 'ja';
+		const dataPath = getDataPath(lang);
+
 		// Load manifest to know total sentences
-		const manifest = await getManifest(fetch);
-		const distractors = await getDistractors(fetch);
+		const manifest = await getManifest(fetch, lang);
+		const distractors = await getDistractors(fetch, lang);
 
 		// Pick a random sentence
 		const sentenceIndex = Math.floor(Math.random() * manifest.total);
@@ -73,7 +104,7 @@ export const GET: RequestHandler = async ({ fetch }) => {
 		// Fetch the chunk
 		const chunk = await fetchJSON<Sentence[]>(
 			fetch,
-			`${DATA_BASE_URL}/chunks/${chunkIndex}.json`
+			`${dataPath}/chunks/${chunkIndex}.json`
 		);
 
 		const sentence = chunk[indexInChunk];
@@ -102,12 +133,15 @@ export const GET: RequestHandler = async ({ fetch }) => {
 			text
 		}));
 
+		const targetText = getTargetText(sentence, lang);
+
 		return json({
 			exercise_id: sentence.id,
 			english: sentence.en,
 			tiles,
-			expected: sentence.ja, // For grading
-			num_correct_tiles: correctTokens.length
+			expected: targetText,
+			num_correct_tiles: correctTokens.length,
+			language: lang
 		});
 	} catch (error) {
 		console.error('Error generating exercise:', error);

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { LANGUAGES } from '$lib/types';
+	import { languageStore } from '$lib/stores/language';
 
 	let { children } = $props();
 
@@ -27,6 +29,9 @@
 	function toggleDarkMode() {
 		darkMode = !darkMode;
 	}
+
+	// Get current language info
+	const currentLangInfo = $derived(LANGUAGES.find((l) => l.code === languageStore.value) || LANGUAGES[0]);
 </script>
 
 <svelte:head>
@@ -35,14 +40,31 @@
 
 <div class="app-container">
 	<nav class="navbar">
-		<span class="logo">🇯🇵 duojp</span>
-		<button class="theme-toggle" onclick={toggleDarkMode} aria-label="Toggle dark mode">
-			{#if darkMode}
-				<span class="icon">☀️</span>
-			{:else}
-				<span class="icon">🌙</span>
-			{/if}
-		</button>
+		<span class="logo">{currentLangInfo.flag} duo{languageStore.value}</span>
+		<div class="nav-controls">
+			<select
+				class="language-select"
+				value={languageStore.value}
+				onchange={(e) => {
+					const target = e.target as HTMLSelectElement;
+					languageStore.set(target.value as 'ja' | 'zh');
+					// Reload the page to fetch new exercise
+					window.location.reload();
+				}}
+				aria-label="Select language"
+			>
+				{#each LANGUAGES as lang}
+					<option value={lang.code}>{lang.flag} {lang.nativeName}</option>
+				{/each}
+			</select>
+			<button class="theme-toggle" onclick={toggleDarkMode} aria-label="Toggle dark mode">
+				{#if darkMode}
+					<span class="icon">☀️</span>
+				{:else}
+					<span class="icon">🌙</span>
+				{/if}
+			</button>
+		</div>
 	</nav>
 
 	<div class="content">
@@ -118,6 +140,32 @@
 		font-size: 1.25rem;
 		font-weight: 700;
 		color: var(--green-primary);
+	}
+
+	.nav-controls {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.language-select {
+		background: var(--bg-tertiary);
+		border: 2px solid var(--border-color);
+		border-radius: 8px;
+		padding: 0.5rem 0.75rem;
+		font-size: 0.9rem;
+		color: var(--text-primary);
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.language-select:hover {
+		border-color: var(--text-muted);
+	}
+
+	.language-select:focus {
+		outline: none;
+		border-color: var(--green-primary);
 	}
 
 	.theme-toggle {

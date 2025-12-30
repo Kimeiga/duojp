@@ -1,0 +1,7 @@
+{
+  "total": 10100,
+  "chunks": 11,
+  "chunk_size": 1000,
+  "source": "translations.jsonl",
+  "language": "zh"
+}
