@@ -47,6 +47,7 @@ class Exercise:
             "english": self.english,
             "tiles": [{"id": i, "text": t.surface} for i, t in enumerate(self.tiles)],
             "num_correct_tiles": len(self.canonical_tokens),
+            "correct_answer": self.canonical_answer,  # For client-side grading
         }
 
 

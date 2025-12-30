@@ -3,6 +3,8 @@ data/raw/
 data/tsv/
 data/app.db
 data/static/
+data/static_chinese/
+data/translations_all.jsonl
 
 # === Python ===
 __pycache__/
@@ -28,6 +30,7 @@ npm-debug.log*
 # === SvelteKit ===
 frontend/.svelte-kit/
 frontend/build/
+frontend/static/data-old/
 
 # === IDE ===
 .idea/
@@ -39,8 +42,9 @@ frontend/build/
 # === Misc ===
 *.bak
 *.tmp
+/tmp/
 
-# === Translation test files ===
+# === Translation/analysis artifacts ===
 scripts/translation_results.json
 scripts/translation_comparison.json
 scripts/translation_batch_comparison.json

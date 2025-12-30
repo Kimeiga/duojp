@@ -1,43 +1,48 @@
 """
-Stanza tokenization wrapper for Chinese text.
+Jieba tokenization wrapper for Chinese text.
 Similar to the Japanese MeCab + UniDic tokenizer, but for Mandarin Chinese.
 
-Stanza (Stanford NLP) is preferred over jieba because it properly splits
-4-character idioms like "梦想成真" into "梦想" + "成真" which is better
-for language learning exercises.
+Jieba is used because it:
+- Properly preserves compound words (图书馆, 洗衣机, 程序员)
+- Preserves person/place names (李明, 北京, 上海)
+- Handles idioms consistently (keeps 4-char idioms together)
+- Has highest agreement with other mainstream tokenizers (ltp, thulac, pkuseg)
+
+Stanza was tested but over-splits compounds and names, making it unsuitable
+for language learning where preserving meaningful units is important.
 """
 from dataclasses import dataclass
 from typing import List, Optional
 
 try:
-    import stanza
-    STANZA_AVAILABLE = True
+    import jieba
+    import jieba.posseg as pseg
+    jieba.setLogLevel(20)  # Suppress loading messages
+    JIEBA_AVAILABLE = True
 except ImportError:
-    STANZA_AVAILABLE = False
+    JIEBA_AVAILABLE = False
 
 
 @dataclass
 class ChineseToken:
     """Represents a tokenized Chinese word with optional POS tag."""
     surface: str
-    pos: str  # Part of speech tag (UPOS)
+    pos: str  # Part of speech tag
 
 
 class ChineseTokenizer:
-    """Stanza tokenizer for Chinese text."""
+    """Jieba tokenizer for Chinese text."""
 
     def __init__(self, use_pos: bool = False):
         """
         Initialize the tokenizer.
 
         Args:
-            use_pos: Whether to include POS tagging (slower but more info).
+            use_pos: Whether to include POS tagging.
         """
-        if not STANZA_AVAILABLE:
-            raise ImportError("stanza is not installed. Run: pip install stanza")
+        if not JIEBA_AVAILABLE:
+            raise ImportError("jieba is not installed. Run: pip install jieba")
 
-        processors = 'tokenize,pos' if use_pos else 'tokenize'
-        self.nlp = stanza.Pipeline('zh', processors=processors, verbose=False)
         self.use_pos = use_pos
 
     def tokenize(self, sentence: str) -> List[ChineseToken]:
@@ -50,14 +55,16 @@ class ChineseTokenizer:
         Returns:
             List of ChineseToken objects with word and POS information
         """
-        doc = self.nlp(sentence)
         tokens = []
 
-        for sent in doc.sentences:
-            for word in sent.words:
-                if word.text.strip():
-                    pos = word.upos if self.use_pos else ""
-                    tokens.append(ChineseToken(surface=word.text, pos=pos))
+        if self.use_pos:
+            for word, pos in pseg.cut(sentence):
+                if word.strip():
+                    tokens.append(ChineseToken(surface=word, pos=pos))
+        else:
+            for word in jieba.cut(sentence):
+                if word.strip():
+                    tokens.append(ChineseToken(surface=word, pos=""))
 
         return tokens
 
@@ -71,8 +78,7 @@ class ChineseTokenizer:
         Returns:
             List of word strings
         """
-        doc = self.nlp(sentence)
-        return [token.text for sent in doc.sentences for token in sent.tokens if token.text.strip()]
+        return [word for word in jieba.cut(sentence) if word.strip()]
 
 
 # Module-level tokenizer instance for convenience
@@ -104,11 +110,13 @@ if __name__ == "__main__":
         "今天天气真好！",
         "她正在看一本书。",
         "你好，你叫什么名字？",
-        "梦想成真。",  # Should split into 梦想 + 成真
+        "梦想成真。",  # Kept as unit (idiom)
         "我希望我的梦想成真。",
+        "我在图书馆看书。",  # 图书馆 preserved
+        "他是一个电脑程序员。",  # 程序员 preserved
     ]
 
-    if STANZA_AVAILABLE:
+    if JIEBA_AVAILABLE:
         tokenizer = ChineseTokenizer()
         for sentence in test_sentences:
             print(f"\n=== {sentence} ===")
@@ -120,5 +128,4 @@ if __name__ == "__main__":
             simple = tokenizer.tokenize_simple(sentence)
             print(f"  Simple: {simple}")
     else:
-        print("stanza is not installed. Run: pip install stanza")
-
+        print("jieba is not installed. Run: pip install jieba")
