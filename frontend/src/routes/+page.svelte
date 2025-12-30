@@ -5,6 +5,8 @@
 	import { dndzone } from 'svelte-dnd-action';
 	import { fetchExercise, gradeAnswer } from '$lib/api';
 	import { languageStore } from '$lib/stores/language.svelte';
+	import { chineseScriptStore } from '$lib/stores/chineseScript.svelte';
+	import { convertChinese } from '$lib/chineseConverter';
 	import { LANGUAGES, type Exercise, type TileData, type GradeResult, type ApiTile } from '$lib/types';
 
 	// Animation duration for flip transitions
@@ -18,6 +20,14 @@
 
 	// Get current language info for display
 	const currentLangInfo = $derived(LANGUAGES.find((l) => l.code === languageStore.value) || LANGUAGES[0]);
+
+	// Helper to convert text for Chinese display
+	function displayText(text: string): string {
+		if (languageStore.value === 'zh') {
+			return convertChinese(text, chineseScriptStore.value);
+		}
+		return text;
+	}
 
 	// Convert API tiles to internal TileData with stable IDs
 	function apiTilesToTileData(apiTiles: ApiTile[]): TileData[] {
@@ -120,9 +130,9 @@
 						class="tile selected"
 						animate:flip={{ duration: FLIP_DURATION_MS }}
 						onclick={() => deselectTile(tile)}
-						aria-label={tile.text}
+						aria-label={displayText(tile.text)}
 					>
-						{tile.text}
+						{displayText(tile.text)}
 					</button>
 				{/each}
 				{#if answerTiles.length === 0}
@@ -148,9 +158,9 @@
 						class="tile"
 						animate:flip={{ duration: FLIP_DURATION_MS }}
 						onclick={() => selectTile(tile)}
-						aria-label={tile.text}
+						aria-label={displayText(tile.text)}
 					>
-						{tile.text}
+						{displayText(tile.text)}
 					</button>
 				{/each}
 			</div>
@@ -173,7 +183,7 @@
 				{:else}
 					<div class="result-icon">✗</div>
 					<p class="result-text">Not quite right</p>
-					<p class="expected">Expected: {result.expected}</p>
+					<p class="expected">Expected: {displayText(result.expected)}</p>
 				{/if}
 				<button class="btn next" onclick={loadExercise}>Next Exercise →</button>
 			</section>

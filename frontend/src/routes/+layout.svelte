@@ -2,6 +2,7 @@
 	import { browser } from '$app/environment';
 	import { LANGUAGES } from '$lib/types';
 	import { languageStore } from '$lib/stores/language.svelte';
+	import { chineseScriptStore } from '$lib/stores/chineseScript.svelte';
 
 	let { children } = $props();
 
@@ -32,6 +33,9 @@
 
 	// Get current language info
 	const currentLangInfo = $derived(LANGUAGES.find((l) => l.code === languageStore.value) || LANGUAGES[0]);
+
+	// Check if Chinese is selected
+	const isChineseSelected = $derived(languageStore.value === 'zh');
 </script>
 
 <svelte:head>
@@ -42,6 +46,16 @@
 	<nav class="navbar">
 		<span class="logo">{currentLangInfo.flag} duo{languageStore.value}</span>
 		<div class="nav-controls">
+			{#if isChineseSelected}
+				<button
+					class="script-toggle"
+					onclick={() => chineseScriptStore.toggle()}
+					aria-label="Toggle Simplified/Traditional Chinese"
+					title={chineseScriptStore.value === 'simplified' ? 'Switch to Traditional' : 'Switch to Simplified'}
+				>
+					{chineseScriptStore.value === 'simplified' ? '繁' : '简'}
+				</button>
+			{/if}
 			<select
 				class="language-select"
 				value={languageStore.value}
@@ -146,6 +160,24 @@
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
+	}
+
+	.script-toggle {
+		background: var(--bg-tertiary);
+		border: 2px solid var(--border-color);
+		border-radius: 8px;
+		padding: 0.4rem 0.6rem;
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--text-primary);
+		cursor: pointer;
+		transition: all 0.2s;
+		min-width: 2.5rem;
+	}
+
+	.script-toggle:hover {
+		border-color: var(--green-primary);
+		background: var(--bg-secondary);
 	}
 
 	.language-select {
