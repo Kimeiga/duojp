@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { LANGUAGES } from '$lib/types';
-	import { languageStore } from '$lib/stores/language';
+	import { languageStore } from '$lib/stores/language.svelte';
 
 	let { children } = $props();
 

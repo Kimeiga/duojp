@@ -4,7 +4,7 @@
 	import { flip } from 'svelte/animate';
 	import { dndzone } from 'svelte-dnd-action';
 	import { fetchExercise, gradeAnswer } from '$lib/api';
-	import { languageStore } from '$lib/stores/language';
+	import { languageStore } from '$lib/stores/language.svelte';
 	import { LANGUAGES, type Exercise, type TileData, type GradeResult, type ApiTile } from '$lib/types';
 
 	// Animation duration for flip transitions
