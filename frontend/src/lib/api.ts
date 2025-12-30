@@ -8,17 +8,20 @@ export async function fetchExercise(language: Language = 'ja'): Promise<Exercise
 	return res.json();
 }
 
-export async function gradeAnswer(
-	exerciseId: number,
-	answer: string,
-	language: Language = 'ja'
-): Promise<GradeResult> {
-	const res = await fetch(`${API_BASE}/grade`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ exercise_id: exerciseId, answer, language })
-	});
-	if (!res.ok) throw new Error('Failed to grade answer');
-	return res.json();
+/**
+ * Grade answer client-side - no API call needed.
+ * Compares user's answer with the expected answer from the exercise.
+ */
+export function gradeAnswer(exercise: Exercise, userAnswer: string): GradeResult {
+	// Normalize both strings for comparison (remove spaces, convert to lowercase for comparison)
+	const normalize = (s: string) => s.replace(/\s+/g, '').trim();
+	const normalizedUser = normalize(userAnswer);
+	const normalizedExpected = normalize(exercise.expected);
+
+	return {
+		correct: normalizedUser === normalizedExpected,
+		expected: exercise.expected,
+		submitted: userAnswer
+	};
 }
 

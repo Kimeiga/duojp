@@ -33,6 +33,7 @@ export interface Exercise {
 	tiles: ApiTile[];
 	num_correct_tiles: number;
 	language?: Language;
+	expected: string;  // Correct answer for client-side grading
 }
 
 export interface GradeResult {

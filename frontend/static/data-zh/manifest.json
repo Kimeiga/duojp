@@ -1,6 +1,6 @@
 {
-  "total": 10100,
-  "chunks": 11,
+  "total": 190321,
+  "chunks": 191,
   "chunk_size": 1000,
   "source": "translations.jsonl",
   "language": "zh"

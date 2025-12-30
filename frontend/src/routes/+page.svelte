@@ -15,7 +15,6 @@
 	let bankTiles: TileData[] = $state([]);
 	let result: GradeResult | null = $state(null);
 	let loading = $state(true);
-	let submitting = $state(false);
 
 	// Get current language info for display
 	const currentLangInfo = $derived(LANGUAGES.find((l) => l.code === languageStore.value) || LANGUAGES[0]);
@@ -81,17 +80,11 @@
 		}
 	}
 
-	async function submit() {
+	function submit() {
 		if (!exercise || answerTiles.length === 0) return;
-		submitting = true;
 		const answer = answerTiles.map((t) => t.text).join('');
-		try {
-			result = await gradeAnswer(exercise.exercise_id, answer, languageStore.value);
-		} catch (e) {
-			console.error('Failed to grade:', e);
-		} finally {
-			submitting = false;
-		}
+		// Client-side grading - instant feedback, works offline
+		result = gradeAnswer(exercise, answer);
 	}
 
 	onMount(loadExercise);
@@ -167,8 +160,8 @@
 			<button class="btn secondary" onclick={resetTiles} disabled={answerTiles.length === 0}>
 				Reset
 			</button>
-			<button class="btn primary" onclick={submit} disabled={answerTiles.length === 0 || submitting}>
-				{submitting ? 'Checking...' : 'Check'}
+			<button class="btn primary" onclick={submit} disabled={answerTiles.length === 0}>
+				Check
 			</button>
 		</section>
 
