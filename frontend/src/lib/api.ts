@@ -13,8 +13,13 @@ export async function fetchExercise(language: Language = 'ja'): Promise<Exercise
  * Compares user's answer with the expected answer from the exercise.
  */
 export function gradeAnswer(exercise: Exercise, userAnswer: string): GradeResult {
-	// Normalize both strings for comparison (remove spaces, convert to lowercase for comparison)
-	const normalize = (s: string) => s.replace(/\s+/g, '').trim();
+	// Normalize: remove whitespace and punctuation for comparison
+	// This is important because tokens don't include punctuation but the expected sentence does
+	const normalize = (s: string) =>
+		s.replace(/\s+/g, '')  // Remove whitespace
+		 .replace(/[。，、；：？！…—·「」『』（）【】《》""''〈〉.,;:?!()\[\]"']/g, '')  // Remove CJK + Western punctuation
+		 .trim();
+
 	const normalizedUser = normalize(userAnswer);
 	const normalizedExpected = normalize(exercise.expected);
 
