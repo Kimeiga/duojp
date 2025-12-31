@@ -11,7 +11,7 @@ function createLanguageStore() {
 	// Initialize from localStorage on browser
 	if (browser) {
 		const stored = localStorage.getItem(STORAGE_KEY);
-		if (stored === 'ja' || stored === 'zh') {
+		if (stored === 'ja' || stored === 'zh' || stored === 'ko' || stored === 'tr') {
 			currentLanguage = stored;
 		}
 	}

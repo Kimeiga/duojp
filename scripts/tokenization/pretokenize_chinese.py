@@ -49,10 +49,78 @@ PUNCTUATION = {
 CHUNK_SIZE = 1000  # Sentences per chunk
 NUM_DISTRACTORS = 500  # Top N tokens for distractor pool
 
+# Common proper nouns (Chinese transliterated names) that should be kept as separate tokens
+# LTP sometimes merges these with adjacent text
+PROPER_NOUNS = {
+    # Most common names in the dataset
+    '汤姆', '玛丽', '杰克', '约翰', '本', '肯', '比尔', '鲍勃', '乔', '凯特',
+    '迈克', '南希', '乔治', '麦克', '丹', '克里斯', '爱丽丝', '苏珊', '贝蒂',
+    '保罗', '彼得', '海伦', '约翰逊', '布莱恩', '弗雷德', '丽莎', '罗伯特',
+    '尼克', '亚当', '安迪', '丹尼尔', '马修', '马克', '史蒂夫', '凯文', '杰森',
+    '杰夫', '威廉', '詹姆斯', '查尔斯', '亨利', '弗兰克', '艾伦', '安东尼',
+    '大卫', '理查德', '托马斯', '迈克尔', '史蒂芬', '马丁', '拉里', '杰瑞',
+    '山姆', '雷', '罗恩', '维克多', '沃尔特', '威尔', '格雷格', '里奥',
+    # Female names
+    '安娜', '艾米', '卡罗尔', '黛安', '伊丽莎白', '艾玛', '格蕾丝', '艾琳',
+    '珍妮', '朱莉', '劳拉', '玛格丽特', '帕特里夏', '蕾切尔', '萨拉', '温迪',
+    '芭芭拉', '辛西娅', '黛博拉', '伊芙', '琳达', '珍妮特', '简', '莎莉',
+    '凯伦', '莫妮卡', '露西', '莉莉', '艾米丽', '格温', '凯莉', '吉尔',
+    # Last names
+    '史密斯', '威廉姆斯', '布朗', '琼斯', '米勒', '戴维斯', '加西亚', '威尔逊',
+    '泰勒', '杰克逊', '怀特', '哈里斯', '克拉克', '刘易斯', '沃克', '霍尔',
+    '斯科特', '格林', '亚当斯', '贝克', '尼尔森', '卡特', '米切尔', '罗伯茨',
+    '特纳', '菲利普斯', '坎贝尔', '帕克', '埃文斯', '爱德华兹', '柯林斯',
+}
+
 
 def is_punctuation(text: str) -> bool:
     """Check if text is purely punctuation."""
     return all(c in PUNCTUATION for c in text)
+
+
+def split_proper_nouns(tokens: List[str]) -> List[str]:
+    """
+    Post-process tokens to split any that contain known proper nouns.
+
+    LTP sometimes merges proper nouns with adjacent text, e.g.:
+    - "汤姆比杰克" should be ["汤姆", "比", "杰克"]
+    - "汤姆牙" should be ["汤姆", "牙"]
+    - "别理汤姆" should be ["别理", "汤姆"]
+
+    BUT we skip tokens with middle dot (·) as these are full names like 汤姆·杰克逊
+    """
+    result = []
+    for token in tokens:
+        # Skip tokens with middle dot - these are intentional full names
+        if '·' in token:
+            result.append(token)
+            continue
+
+        # Check if any proper noun is contained in this token (but isn't the whole token)
+        found_split = False
+        for name in PROPER_NOUNS:
+            if name in token and token != name:
+                # Split around the name
+                idx = token.find(name)
+                before = token[:idx]
+                after = token[idx + len(name):]
+
+                # Recursively process parts (there might be multiple names)
+                parts = []
+                if before:
+                    parts.extend(split_proper_nouns([before]))
+                parts.append(name)
+                if after:
+                    parts.extend(split_proper_nouns([after]))
+
+                result.extend(parts)
+                found_split = True
+                break
+
+        if not found_split:
+            result.append(token)
+
+    return result
 
 
 # Global LTP instance (lazy loaded)
@@ -71,7 +139,11 @@ def tokenize_sentence(zh_text: str) -> List[str]:
     ltp = get_ltp()
     output = ltp.pipeline([zh_text], tasks=['cws'])
     tokens = output.cws[0]
-    return [w for w in tokens if w.strip() and not is_punctuation(w)]
+    # Filter punctuation
+    tokens = [w for w in tokens if w.strip() and not is_punctuation(w)]
+    # Post-process to split proper nouns that got merged
+    tokens = split_proper_nouns(tokens)
+    return tokens
 
 
 def process_corpus(input_path: Path, output_dir: Path, verbose: bool = False):

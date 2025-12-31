@@ -1,45 +1,50 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-// Supported languages and their data paths
-type Language = 'ja' | 'zh';
-const LANGUAGE_DATA_PATHS: Record<Language, string> = {
-	ja: '/data',      // Japanese - default
-	zh: '/data-zh'    // Chinese (Mandarin)
-};
+// Supported languages
+type Language = 'ja' | 'zh' | 'ko' | 'tr';
 
-interface Manifest {
+// Unified data format - all translations in one object
+interface UnifiedManifest {
 	total: number;
 	chunks: number;
 	chunk_size: number;
-	source: string;
-	language?: string;
+	languages: Language[];
 }
 
-interface SentenceJa {
-	id: number;
-	en: string;
-	ja: string;
+interface TranslationData {
+	text: string;
 	tokens: string[];
 }
 
-interface SentenceZh {
+interface UnifiedSentence {
 	id: number;
 	en: string;
-	zh: string;
-	tokens: string[];
+	translations: {
+		ja?: TranslationData;
+		zh?: TranslationData;
+		ko?: TranslationData;
+		tr?: TranslationData;
+	};
 }
-
-type Sentence = SentenceJa | SentenceZh;
 
 interface TileData {
 	id: number;
 	text: string;
 }
 
-// Cache manifest and distractors per language
-const cachedManifests: Partial<Record<Language, Manifest>> = {};
-const cachedDistractors: Partial<Record<Language, string[]>> = {};
+interface LanguageExercise {
+	text: string;
+	tokens: string[];
+	tiles: TileData[];
+	num_correct_tiles: number;
+}
+
+// Cache
+let cachedManifest: UnifiedManifest | null = null;
+let cachedDistractors: Record<Language, string[]> | null = null;
+
+const DATA_PATH = '/data-unified';
 
 async function fetchJSON<T>(fetch: typeof globalThis.fetch, url: string): Promise<T> {
 	const response = await fetch(url);
@@ -49,24 +54,18 @@ async function fetchJSON<T>(fetch: typeof globalThis.fetch, url: string): Promis
 	return response.json();
 }
 
-function getDataPath(lang: Language): string {
-	return LANGUAGE_DATA_PATHS[lang] || LANGUAGE_DATA_PATHS.ja;
+async function getManifest(fetch: typeof globalThis.fetch): Promise<UnifiedManifest> {
+	if (!cachedManifest) {
+		cachedManifest = await fetchJSON<UnifiedManifest>(fetch, `${DATA_PATH}/manifest.json`);
+	}
+	return cachedManifest;
 }
 
-async function getManifest(fetch: typeof globalThis.fetch, lang: Language): Promise<Manifest> {
-	if (!cachedManifests[lang]) {
-		const dataPath = getDataPath(lang);
-		cachedManifests[lang] = await fetchJSON<Manifest>(fetch, `${dataPath}/manifest.json`);
+async function getDistractors(fetch: typeof globalThis.fetch): Promise<Record<Language, string[]>> {
+	if (!cachedDistractors) {
+		cachedDistractors = await fetchJSON<Record<Language, string[]>>(fetch, `${DATA_PATH}/distractors.json`);
 	}
-	return cachedManifests[lang]!;
-}
-
-async function getDistractors(fetch: typeof globalThis.fetch, lang: Language): Promise<string[]> {
-	if (!cachedDistractors[lang]) {
-		const dataPath = getDataPath(lang);
-		cachedDistractors[lang] = await fetchJSON<string[]>(fetch, `${dataPath}/distractors.json`);
-	}
-	return cachedDistractors[lang]!;
+	return cachedDistractors;
 }
 
 function shuffle<T>(array: T[]): T[] {
@@ -78,70 +77,139 @@ function shuffle<T>(array: T[]): T[] {
 	return result;
 }
 
-function getTargetText(sentence: Sentence, lang: Language): string {
-	if (lang === 'zh') {
-		return (sentence as SentenceZh).zh;
-	}
-	return (sentence as SentenceJa).ja;
+// Punctuation characters to filter from tokens (safety net for any edge cases in pre-tokenized data)
+const PUNCTUATION_CHARS = new Set([
+	// CJK punctuation
+	'。', '，', '、', '；', '：', '？', '！', '…', '—', '·',
+	'「', '」', '『', '』', '（', '）', '【', '】', '《', '》', '〈', '〉',
+	// Curly quotes (using Unicode escapes to avoid syntax issues)
+	'\u201C', '\u201D', '\u2018', '\u2019', // " " ' '
+	// General punctuation
+	'.', ',', ';', ':', '?', '!', '(', ')', '[', ']',
+	'"', "'", '-', '–', '—', ' ', '\t', '\n',
+	// Additional edge cases
+	'～', '〜', '．', '＇', '＂'
+]);
+
+/**
+ * Check if a token is valid for display as a tile.
+ * Filters out tokens that are purely punctuation or have other issues.
+ */
+function isValidToken(token: string): boolean {
+	// Must have some content
+	if (!token || token.trim().length === 0) return false;
+
+	// Check if purely punctuation
+	const isPurelyPunctuation = [...token].every((c) => PUNCTUATION_CHARS.has(c));
+	if (isPurelyPunctuation) return false;
+
+	// Check if token starts or ends with quotation marks (malformed tokenization)
+	// Using Unicode escapes for curly quotes: \u201C " \u201D " \u2018 ' \u2019 '
+	if (/^["\u201C\u201D'\u2018\u2019]/.test(token) || /["\u201C\u201D'\u2018\u2019]$/.test(token))
+		return false;
+
+	return true;
 }
 
-export const GET: RequestHandler = async ({ fetch, url }) => {
+function buildExerciseForLanguage(
+	translation: TranslationData,
+	distractors: string[]
+): LanguageExercise {
+	// Filter out any invalid tokens (punctuation, malformed tokens)
+	const correctTokens = translation.tokens.filter(isValidToken);
+
+	const numDistractors = Math.min(
+		Math.max(3, Math.floor(correctTokens.length * 0.5)),
+		8
+	);
+
+	// Pick distractors that aren't in the correct answer and are valid
+	const correctSet = new Set(correctTokens);
+	const availableDistractors = distractors.filter(
+		(d) => !correctSet.has(d) && isValidToken(d)
+	);
+	const selectedDistractors = shuffle(availableDistractors).slice(0, numDistractors);
+
+	// Combine and shuffle all tiles
+	const allTokens = [...correctTokens, ...selectedDistractors];
+	const shuffledTokens = shuffle(allTokens);
+
+	const tiles: TileData[] = shuffledTokens.map((text, index) => ({
+		id: index,
+		text
+	}));
+
+	return {
+		text: translation.text,
+		tokens: correctTokens,
+		tiles,
+		num_correct_tiles: correctTokens.length
+	};
+}
+
+// Pattern to detect multi-dialogue sentences (e.g. "Hello." "Hi there.")
+// These have a closing curly quote, space, and opening curly quote
+const MULTI_DIALOGUE_PATTERN = /"\s+"/;
+
+// Check if a sentence is suitable for an exercise
+function isSuitableSentence(sentence: UnifiedSentence): boolean {
+	// Skip multi-dialogue sentences (multiple quoted exchanges in one)
+	if (MULTI_DIALOGUE_PATTERN.test(sentence.en)) {
+		return false;
+	}
+	return true;
+}
+
+export const GET: RequestHandler = async ({ fetch }) => {
 	try {
-		// Get language from query param (default: Japanese)
-		const langParam = url.searchParams.get('lang');
-		const lang: Language = (langParam === 'zh') ? 'zh' : 'ja';
-		const dataPath = getDataPath(lang);
+		// Load manifest and distractors
+		const manifest = await getManifest(fetch);
+		const allDistractors = await getDistractors(fetch);
 
-		// Load manifest to know total sentences
-		const manifest = await getManifest(fetch, lang);
-		const distractors = await getDistractors(fetch, lang);
+		// Try to find a suitable sentence (with retry logic)
+		const MAX_ATTEMPTS = 10;
+		let sentence: UnifiedSentence | null = null;
 
-		// Pick a random sentence
-		const sentenceIndex = Math.floor(Math.random() * manifest.total);
-		const chunkIndex = Math.floor(sentenceIndex / manifest.chunk_size);
-		const indexInChunk = sentenceIndex % manifest.chunk_size;
+		for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+			// Pick a random sentence
+			const sentenceIndex = Math.floor(Math.random() * manifest.total);
+			const chunkIndex = Math.floor(sentenceIndex / manifest.chunk_size);
+			const indexInChunk = sentenceIndex % manifest.chunk_size;
 
-		// Fetch the chunk
-		const chunk = await fetchJSON<Sentence[]>(
-			fetch,
-			`${dataPath}/chunks/${chunkIndex}.json`
-		);
+			// Fetch the chunk
+			const chunk = await fetchJSON<UnifiedSentence[]>(
+				fetch,
+				`${DATA_PATH}/chunks/${chunkIndex}.json`
+			);
 
-		const sentence = chunk[indexInChunk];
-		if (!sentence) {
-			return json({ error: 'Sentence not found' }, { status: 404 });
+			const candidate = chunk[indexInChunk];
+			if (candidate && isSuitableSentence(candidate)) {
+				sentence = candidate;
+				break;
+			}
 		}
 
-		// Build tiles: correct tokens + distractors
-		const correctTokens = sentence.tokens;
-		const numDistractors = Math.min(
-			Math.max(3, Math.floor(correctTokens.length * 0.5)),
-			8
-		);
+		if (!sentence) {
+			return json({ error: 'Could not find suitable sentence' }, { status: 404 });
+		}
 
-		// Pick distractors that aren't in the correct answer
-		const correctSet = new Set(correctTokens);
-		const availableDistractors = distractors.filter((d) => !correctSet.has(d));
-		const selectedDistractors = shuffle(availableDistractors).slice(0, numDistractors);
+		// Build exercises for all available languages
+		const exercises: Partial<Record<Language, LanguageExercise>> = {};
 
-		// Combine and shuffle all tiles
-		const allTokens = [...correctTokens, ...selectedDistractors];
-		const shuffledTokens = shuffle(allTokens);
+		for (const lang of ['ja', 'zh', 'ko', 'tr'] as Language[]) {
+			const translation = sentence.translations[lang];
+			const distractors = allDistractors[lang] || [];
 
-		const tiles: TileData[] = shuffledTokens.map((text, index) => ({
-			id: index,
-			text
-		}));
+			if (translation && translation.tokens && translation.tokens.length > 0) {
+				exercises[lang] = buildExerciseForLanguage(translation, distractors);
+			}
+		}
 
-		const targetText = getTargetText(sentence, lang);
-
+		// Return unified response with all translations
 		return json({
 			exercise_id: sentence.id,
 			english: sentence.en,
-			tiles,
-			expected: targetText,
-			num_correct_tiles: correctTokens.length,
-			language: lang
+			exercises  // Contains ja, zh, ko with tiles for each
 		});
 	} catch (error) {
 		console.error('Error generating exercise:', error);

@@ -1,8 +1,5 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { LANGUAGES } from '$lib/types';
-	import { languageStore } from '$lib/stores/language.svelte';
-	import { chineseScriptStore } from '$lib/stores/chineseScript.svelte';
 
 	let { children } = $props();
 
@@ -30,47 +27,20 @@
 	function toggleDarkMode() {
 		darkMode = !darkMode;
 	}
-
-	// Get current language info
-	const currentLangInfo = $derived(LANGUAGES.find((l) => l.code === languageStore.value) || LANGUAGES[0]);
-
-	// Check if Chinese is selected
-	const isChineseSelected = $derived(languageStore.value === 'zh');
 </script>
 
 <svelte:head>
 	<link rel="icon" href="/favicon.svg" />
+	<!-- Fonts: Geist (UI) + Zen Kaku Gothic New (Japanese/CJK) + Noto Sans for all CJK -->
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+	<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500&family=Noto+Sans+JP:wght@400;500&family=Noto+Sans+SC:wght@400;500&family=Noto+Sans+TC:wght@400;500&family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet" />
 </svelte:head>
 
 <div class="app-container">
 	<nav class="navbar">
-		<span class="logo">{currentLangInfo.flag} duo{languageStore.value}</span>
+		<span class="logo">duojp <span class="logo-flags">🇯🇵🇨🇳🇹🇼🇰🇷🇹🇷</span></span>
 		<div class="nav-controls">
-			{#if isChineseSelected}
-				<button
-					class="script-toggle"
-					onclick={() => chineseScriptStore.toggle()}
-					aria-label="Toggle Simplified/Traditional Chinese"
-					title={chineseScriptStore.value === 'simplified' ? 'Switch to Traditional' : 'Switch to Simplified'}
-				>
-					{chineseScriptStore.value === 'simplified' ? '繁' : '简'}
-				</button>
-			{/if}
-			<select
-				class="language-select"
-				value={languageStore.value}
-				onchange={(e) => {
-					const target = e.target as HTMLSelectElement;
-					languageStore.set(target.value as 'ja' | 'zh');
-					// Reload the page to fetch new exercise
-					window.location.reload();
-				}}
-				aria-label="Select language"
-			>
-				{#each LANGUAGES as lang}
-					<option value={lang.code}>{lang.flag} {lang.nativeName}</option>
-				{/each}
-			</select>
 			<button class="theme-toggle" onclick={toggleDarkMode} aria-label="Toggle dark mode">
 				{#if darkMode}
 					<span class="icon">☀️</span>
@@ -88,41 +58,43 @@
 
 <style>
 	:global(:root) {
-		--bg-primary: #f0f0f0;
+		/* Light theme - clean and subtle */
+		--bg-primary: #fafafa;
 		--bg-secondary: #ffffff;
-		--bg-tertiary: #e8e8e8;
-		--text-primary: #333333;
-		--text-secondary: #777777;
-		--text-muted: #aaaaaa;
-		--border-color: #e5e5e5;
-		--border-dashed: #cccccc;
-		--shadow-color: rgba(0, 0, 0, 0.08);
-		--green-primary: #58cc02;
-		--green-dark: #46a302;
-		--blue-primary: #1cb0f6;
-		--blue-dark: #1899d6;
+		--bg-tertiary: #f4f4f5;
+		--text-primary: #18181b;
+		--text-secondary: #52525b;
+		--text-muted: #a1a1aa;
+		--border-color: #e4e4e7;
+		--border-dashed: #d4d4d8;
+		--shadow-color: rgba(0, 0, 0, 0.06);
+		--green-primary: #22c55e;
+		--green-dark: #16a34a;
+		--blue-primary: #3b82f6;
+		--blue-dark: #2563eb;
 		--tile-bg: #ffffff;
-		--tile-border: #e5e5e5;
-		--tile-shadow: #e5e5e5;
+		--tile-border: #e4e4e7;
+		--tile-shadow: #d4d4d8;
 	}
 
 	:global(:root.dark) {
-		--bg-primary: #1a1a2e;
-		--bg-secondary: #16213e;
-		--bg-tertiary: #0f3460;
-		--text-primary: #e8e8e8;
-		--text-secondary: #9ca3af;
-		--text-muted: #6b7280;
-		--border-color: #374151;
-		--border-dashed: #4b5563;
-		--shadow-color: rgba(0, 0, 0, 0.3);
-		--green-primary: #4ade80;
-		--green-dark: #22c55e;
-		--blue-primary: #38bdf8;
-		--blue-dark: #0ea5e9;
-		--tile-bg: #1e293b;
-		--tile-border: #374151;
-		--tile-shadow: #0f172a;
+		/* Dark theme - deep blacks with lighter raised surfaces */
+		--bg-primary: #09090b;
+		--bg-secondary: #18181b;
+		--bg-tertiary: #27272a;
+		--text-primary: #fafafa;
+		--text-secondary: #a1a1aa;
+		--text-muted: #71717a;
+		--border-color: #3f3f46;
+		--border-dashed: #52525b;
+		--shadow-color: rgba(0, 0, 0, 0.5);
+		--green-primary: #22c55e;
+		--green-dark: #16a34a;
+		--blue-primary: #3b82f6;
+		--blue-dark: #2563eb;
+		--tile-bg: #27272a;
+		--tile-border: #3f3f46;
+		--tile-shadow: #18181b;
 	}
 
 	:global(html, body) {
@@ -132,11 +104,13 @@
 	}
 
 	:global(body) {
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		background: var(--bg-primary);
 		color: var(--text-primary);
-		transition: background-color 0.3s, color 0.3s;
+		transition: background-color 0.2s, color 0.2s;
 		overflow: hidden;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
 	}
 
 	.navbar {
@@ -154,50 +128,20 @@
 		font-size: 1.25rem;
 		font-weight: 700;
 		color: var(--green-primary);
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.logo-flags {
+		font-size: 1rem;
+		letter-spacing: 0.1rem;
 	}
 
 	.nav-controls {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-	}
-
-	.script-toggle {
-		background: var(--bg-tertiary);
-		border: 2px solid var(--border-color);
-		border-radius: 8px;
-		padding: 0.4rem 0.6rem;
-		font-size: 1rem;
-		font-weight: 600;
-		color: var(--text-primary);
-		cursor: pointer;
-		transition: all 0.2s;
-		min-width: 2.5rem;
-	}
-
-	.script-toggle:hover {
-		border-color: var(--green-primary);
-		background: var(--bg-secondary);
-	}
-
-	.language-select {
-		background: var(--bg-tertiary);
-		border: 2px solid var(--border-color);
-		border-radius: 8px;
-		padding: 0.5rem 0.75rem;
-		font-size: 0.9rem;
-		color: var(--text-primary);
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.language-select:hover {
-		border-color: var(--text-muted);
-	}
-
-	.language-select:focus {
-		outline: none;
-		border-color: var(--green-primary);
 	}
 
 	.theme-toggle {

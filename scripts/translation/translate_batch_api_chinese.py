@@ -10,9 +10,9 @@ import sys
 import time
 from pathlib import Path
 
-# Load .env file
+# Load .env file from project root
 from dotenv import load_dotenv
-load_dotenv(Path(__file__).parent.parent / ".env")
+load_dotenv(Path(__file__).parent.parent.parent / ".env")
 
 try:
     from google import genai
@@ -22,7 +22,7 @@ except ImportError:
     sys.exit(1)
 
 # Configuration
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3-flash-preview"
 REQUESTS_PER_BATCH = 1000
 SENTENCES_PER_REQUEST = 50
 
@@ -226,7 +226,17 @@ def process_batch_results(client, job, sentences: list[dict], start_idx: int, ou
         elif isinstance(resp, dict) and 'response' in resp:
             resp_data = resp.get('response', {})
             if 'candidates' in resp_data:
-                text = resp_data['candidates'][0]['content']['parts'][0]['text'].strip()
+                try:
+                    candidate = resp_data['candidates'][0]
+                    content = candidate.get('content', {})
+                    parts = content.get('parts', [])
+                    if parts:
+                        text = parts[0].get('text', '').strip()
+                    # Fallback: try direct text field
+                    if not text and 'text' in candidate:
+                        text = candidate['text'].strip()
+                except (KeyError, IndexError, TypeError) as e:
+                    print(f"   ⚠️ Error extracting text from candidate: {e}")
 
         if not text:
             errors += 1
@@ -280,7 +290,7 @@ def main():
         print("\n❌ GEMINI_API_KEY not set!")
         sys.exit(1)
 
-    data_dir = Path(__file__).parent.parent / "data"
+    data_dir = Path(__file__).parent.parent.parent / "data"
     output_dir = data_dir / "translated_chinese"
     batch_dir = output_dir / "batch_jobs"
     output_dir.mkdir(exist_ok=True)

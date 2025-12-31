@@ -25,9 +25,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from app.tokenize import Tokenizer
 
 # Punctuation to filter out from tokens
-PUNCTUATION = {"。", "、", "．", "，", ".", ",", "！", "？", "!", "?", "…", "・", 
-               "「", "」", "『", "』", "（", "）", "(", ")", "【", "】", "〈", "〉", "《", "》",
-               "～", "〜", "ー", "―", "‐", "-", "：", ":", "；", ";", "　", " "}
+# Punctuation to filter out from tokens (Japanese + general)
+PUNCTUATION = {
+    # Japanese punctuation
+    "。", "、", "．", "，", "！", "？", "…", "・",
+    "「", "」", "『", "』", "（", "）", "【", "】", "〈", "〉", "《", "》",
+    "～", "〜", "ー", "―", "‐",
+    # Curly quotes (both CJK and Western)
+    """, """, "'", "'",
+    # General punctuation
+    ".", ",", ";", ":", "?", "!", "(", ")", "[", "]",
+    '"', "'", "-", "–", "—", " ", "　", "\t", "\n"
+}
 
 CHUNK_SIZE = 1000  # Sentences per chunk
 NUM_DISTRACTORS = 500  # Top N tokens for distractor pool
