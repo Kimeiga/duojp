@@ -662,10 +662,16 @@ ${result ? `**Last result:** ${result.correct ? 'Correct' : 'Incorrect'}
 		background: var(--bg-secondary);
 		color: var(--text-secondary);
 		border: 2px solid var(--border-color);
+		box-shadow: 0 4px 0 var(--border-color);
 	}
 
 	.btn.secondary:hover:not(:disabled) {
 		background: var(--bg-tertiary);
+	}
+
+	.btn.secondary:active:not(:disabled) {
+		transform: translateY(4px);
+		box-shadow: none;
 	}
 
 	/* Result panel */
@@ -728,6 +734,11 @@ ${result ? `**Last result:** ${result.correct ? 'Correct' : 'Incorrect'}
 
 	.btn.next:hover {
 		filter: brightness(1.1);
+	}
+
+	.btn.next:active {
+		transform: translateY(4px);
+		box-shadow: none;
 	}
 
 	/* Debug copy button - small, unobtrusive at bottom */

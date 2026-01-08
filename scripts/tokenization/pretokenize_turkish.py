@@ -139,10 +139,10 @@ REPORTED_PAST_ALLOMORPHS = {
 
 # Progressive suffix: -iyor/-ıyor/-uyor/-üyor (high vowel harmony)
 PROGRESSIVE_ALLOMORPHS = {
-    "iyor": ("iyor/üyor", "PROG"),
-    "ıyor": ("iyor/üyor", "PROG"),
-    "uyor": ("iyor/üyor", "PROG"),
-    "üyor": ("iyor/üyor", "PROG"),
+    "iyor": ("ı/i/u/üyor", "PROG"),
+    "ıyor": ("ı/i/u/üyor", "PROG"),
+    "uyor": ("ı/i/u/üyor", "PROG"),
+    "üyor": ("ı/i/u/üyor", "PROG"),
 }
 
 # Possessive suffixes (1st person singular): -im/-ım/-um/-üm (high vowel harmony)
@@ -190,7 +190,7 @@ ALLOMORPH_STANDALONE_FORMS = {
     "(y)di/dı": {"di", "dı", "du", "dü", "ti", "tı", "tu", "tü", "ydi", "ydı", "ydu", "ydü"},
     "ecek/acak": {"ecek", "acak", "eceğ", "acağ"},
     "miş/mış": {"miş", "mış", "muş", "müş"},
-    "iyor/üyor": {"iyor", "ıyor", "uyor", "üyor"},
+    "ı/i/u/üyor": {"iyor", "ıyor", "uyor", "üyor"},
     "im/ım/um/üm": {"im", "ım", "um", "üm"},
     "se/sa": {"se", "sa"},
     "eyim/ayım": {"eyim", "ayım"},
