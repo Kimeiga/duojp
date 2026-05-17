@@ -30,7 +30,13 @@ npm-debug.log*
 # === SvelteKit ===
 frontend/.svelte-kit/
 frontend/build/
+
+# Legacy per-language data dirs — superseded by data-unified (the only one the app reads)
 frontend/static/data-old/
+frontend/static/data/
+frontend/static/data-zh/
+frontend/static/data-ko/
+frontend/static/data-tr/
 
 # === IDE ===
 .idea/

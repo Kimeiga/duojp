@@ -214,6 +214,34 @@
 		result = gradeUnifiedAnswer(currentExercise, userTokens, languageStore.value);
 	}
 
+	// Text-to-speech for the correct answer using the Web Speech API
+	const SPEECH_LANG: Record<Language, string> = {
+		ja: 'ja-JP',
+		zh: 'zh-CN',
+		ko: 'ko-KR',
+		tr: 'tr-TR'
+	};
+	let speaking = $state(false);
+
+	function speakAnswer() {
+		if (!currentExercise) return;
+		if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+		// Cancel anything already queued so repeated clicks restart cleanly
+		window.speechSynthesis.cancel();
+
+		const utterance = new SpeechSynthesisUtterance(displayText(currentExercise.text));
+		utterance.lang =
+			languageStore.value === 'zh' && chineseScriptStore.value === 'traditional'
+				? 'zh-TW'
+				: SPEECH_LANG[languageStore.value];
+		utterance.rate = 0.9;
+		utterance.onstart = () => { speaking = true; };
+		utterance.onend = () => { speaking = false; };
+		utterance.onerror = () => { speaking = false; };
+		window.speechSynthesis.speak(utterance);
+	}
+
 	// Copy debug context to clipboard for pasting into an LLM
 	let debugCopied = $state(false);
 	async function copyDebugContext() {
@@ -379,6 +407,15 @@ ${result ? `**Last result:** ${result.correct ? 'Correct' : 'Incorrect'}
 					<p class="result-text">Not quite right</p>
 					<p class="expected">Expected: {displayText(result.expected)}</p>
 				{/if}
+				<button
+					class="btn speak"
+					class:speaking
+					onclick={speakAnswer}
+					title="Listen to the correct answer"
+					aria-label="Listen to the correct answer"
+				>
+					🔊 Listen
+				</button>
 				<button class="btn next" onclick={loadExercise}>Next Exercise →</button>
 			</section>
 		{/if}
@@ -739,6 +776,35 @@ ${result ? `**Last result:** ${result.correct ? 'Correct' : 'Incorrect'}
 	.btn.next:active {
 		transform: translateY(4px);
 		box-shadow: none;
+	}
+
+	/* Listen / TTS button */
+	.btn.speak {
+		background: var(--bg-secondary);
+		color: var(--text-primary);
+		border: 2px solid var(--border-color);
+		box-shadow: 0 4px 0 var(--border-color);
+		margin-right: 0.75rem;
+	}
+
+	.btn.speak:hover {
+		background: var(--bg-tertiary);
+	}
+
+	.btn.speak:active {
+		transform: translateY(4px);
+		box-shadow: none;
+	}
+
+	.btn.speak.speaking {
+		border-color: var(--blue-primary);
+		color: var(--blue-primary);
+		animation: speak-pulse 1s ease-in-out infinite;
+	}
+
+	@keyframes speak-pulse {
+		0%, 100% { opacity: 1; }
+		50% { opacity: 0.6; }
 	}
 
 	/* Debug copy button - small, unobtrusive at bottom */
